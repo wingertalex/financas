@@ -1,0 +1,25 @@
+<!-- Exemplo simplificado de formulário e projeção -->
+<input type="number" id="valorGasto" placeholder="Valor R$">
+<button onclick="adicionarGasto()">Registrar</button>
+
+<div id="dashboard">
+  <h3>Projeção para o Próximo Mês: <span id="previsao">R$ 0,00</span></h3>
+</div>
+
+<script>
+  let gastos = JSON.parse(localStorage.getItem('gastos')) || [];
+
+  function adicionarGasto() {
+    const valor = document.getElementById('valorGasto').value;
+    gastos.push({ valor: parseFloat(valor), data: new Date() });
+    localStorage.setItem('gastos', JSON.stringify(gastos));
+    calcularProjeção();
+  }
+
+  function calcularProjeção() {
+    // Lógica para média aritmética simples de projeção
+    const total = gastos.reduce((acc, g) => acc + g.valor, 0);
+    const media = total / (gastos.length || 1);
+    document.getElementById('previsao').innerText = `R$ ${media.toFixed(2)}`;
+  }
+</script>
