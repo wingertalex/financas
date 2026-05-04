@@ -1,25 +1,337 @@
-<!-- Exemplo simplificado de formulário e projeção -->
-<input type="number" id="valorGasto" placeholder="Valor R$">
-<button onclick="adicionarGasto()">Registrar</button>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Financeiro</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #1d4ed8; }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .kpi-value { font-size: 1.5rem; font-weight: bold; margin-top: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        th { background-color: #f9fafb; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
 
-<div id="dashboard">
-  <h3>Projeção para o Próximo Mês: <span id="previsao">R$ 0,00</span></h3>
+<div class="container">
+    <!-- Painel de Inserção de Dados -->
+    <div class="card">
+        <h2>Registrar Dados</h2>
+        
+        <div class="form-group">
+            <label>Salário Líquido Mensal (R$)</label>
+            <input type="number" id="salario" placeholder="Ex: 5000.00" onchange="atualizarSalario()">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+
+        <form id="formGasto">
+            <div class="form-group">
+                <label>Descrição da Despesa</label>
+                <input type="text" id="descricao" required placeholder="Ex: Internet">
+            </div>
+            <div class="form-group">
+                <label>Valor (R$)</label>
+                <input type="number" id="valor" step="0.01" required placeholder="Ex: 150.00">
+            </div>
+            <div class="form-group">
+                <label>Tipo de Despesa</label>
+                <select id="tipo" onchange="toggleParcelas()">
+                    <option value="Unica">Única (Apenas este mês)</option>
+                    <option value="Recorrente">Recorrente (Mensal fixa)</option>
+                    <option value="Parcelada">Parcelada</option>
+                </select>
+            </div>
+            <div class="form-group hidden" id="divParcelas">
+                <label>Número de Parcelas</label>
+                <input type="number" id="parcelas" min="2" value="2">
+            </div>
+            <button type="submit" id="btnSalvar">Salvar Despesa</button>
+        </form>
+    </div>
+
+    <!-- Dashboard de Visualização -->
+    <div class="card">
+        <h2>Visão Geral - Mês Atual</h2>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div>Salário Base</div>
+                <div class="kpi-value" id="kpiSalario">R$ 0,00</div>
+            </div>
+            <div class="kpi-card" style="background-color: #ef4444;">
+                <div>Despesas do Mês</div>
+                <div class="kpi-value" id="kpiDespesas">R$ 0,00</div>
+            </div>
+            <div class="kpi-card" style="background-color: #10b981;">
+                <div>Saldo Projetado</div>
+                <div class="kpi-value" id="kpiSaldo">R$ 0,00</div>
+            </div>
+        </div>
+
+        <h2>Projeção para os Próximos 3 Meses</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mês/Ano</th>
+                    <th>Despesas Projetadas (R$)</th>
+                    <th>Saldo Estimado (R$)</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaProjecao">
+                <!-- Preenchido via JS -->
+            </tbody>
+        </table>
+
+        <h2 style="margin-top: 20px;">Últimos Registros</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Tipo</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaHistorico">
+                <!-- Preenchido via JS -->
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-  let gastos = JSON.parse(localStorage.getItem('gastos')) || [];
+    const API_URL = "https://script.google.com/macros/s/AKfycby1PaaExt3kffBOOchixMsoZKBzFaWU47epIPSdhwcM9b0WgJls01bk_xBxllgZnYSM/exec";
+    
+    // Controle local do salário
+    let salarioLiquido = localStorage.getItem('salario') ? parseFloat(localStorage.getItem('salario')) : 0;
+    document.getElementById('salario').value = salarioLiquido || '';
+    
+    function atualizarSalario() {
+        salarioLiquido = parseFloat(document.getElementById('salario').value) || 0;
+        localStorage.setItem('salario', salarioLiquido);
+        carregarDados(); // Recalcula os KPIs
+    }
 
-  function adicionarGasto() {
-    const valor = document.getElementById('valorGasto').value;
-    gastos.push({ valor: parseFloat(valor), data: new Date() });
-    localStorage.setItem('gastos', JSON.stringify(gastos));
-    calcularProjeção();
-  }
+    function toggleParcelas() {
+        const tipo = document.getElementById('tipo').value;
+        const divParcelas = document.getElementById('divParcelas');
+        if (tipo === 'Parcelada') {
+            divParcelas.classList.remove('hidden');
+        } else {
+            divParcelas.classList.add('hidden');
+        }
+    }
 
-  function calcularProjeção() {
-    // Lógica para média aritmética simples de projeção
-    const total = gastos.reduce((acc, g) => acc + g.valor, 0);
-    const media = total / (gastos.length || 1);
-    document.getElementById('previsao').innerText = `R$ ${media.toFixed(2)}`;
-  }
+    // Evento de submit do formulário
+    document.getElementById('formGasto').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('btnSalvar');
+        btn.innerText = "Salvando...";
+        btn.disabled = true;
+
+        const gasto = {
+            data: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+            descricao: document.getElementById('descricao').value,
+            valor: parseFloat(document.getElementById('valor').value),
+            tipo: document.getElementById('tipo').value,
+            parcelas: document.getElementById('tipo').value === 'Parcelada' ? parseInt(document.getElementById('parcelas').value) : 1
+        };
+
+        await enviarGasto(gasto);
+        
+        this.reset();
+        toggleParcelas();
+        btn.innerText = "Salvar Despesa";
+        btn.disabled = false;
+    });
+
+    // Função para enviar um novo gasto[cite: 1]
+    async function enviarGasto(gasto) {
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify(gasto),
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8',
+          }
+        });
+        const result = await response.json();
+        console.log("Salvo com sucesso!", result);
+        carregarDados(); // Recarrega o dashboard com os dados novos
+      } catch (error) {
+        console.error("Erro ao salvar:", error);
+        alert("Erro ao salvar dados. Verifique o console.");
+      }
+    }
+
+    // Função para buscar o histórico completo[cite: 1]
+    async function carregarDados() {
+      try {
+        const response = await fetch(API_URL);
+        const dados = await response.json();
+        console.log("Dados recebidos da planilha:", dados);
+        processarDashboard(dados);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      }
+    }
+
+    // Lógica para popular as tabelas e calcular as projeções
+    function processarDashboard(dados) {
+        const hoje = new Date();
+        const mesAtual = hoje.getMonth(); // 0 a 11
+        const anoAtual = hoje.getFullYear();
+
+        let despesasMesAtual = 0;
+        let projecaoMeses = [0, 0, 0]; // Próximos 3 meses (+1, +2, +3)
+
+        const tbodyHistorico = document.getElementById('tabelaHistorico');
+        tbodyHistorico.innerHTML = '';
+
+        // Processa cada linha da planilha
+        dados.reverse().forEach((item, index) => {
+            // Renderiza as últimas 5 transações na tabela de histórico
+            if(index < 5) {
+                tbodyHistorico.innerHTML += `
+                    <tr>
+                        <td>${new Date(item.Data).toLocaleDateString('pt-BR')}</td>
+                        <td>${item.Descricao}</td>
+                        <td>R$ ${parseFloat(item.Valor).toFixed(2)}</td>
+                        <td>${item.Tipo} ${item.Tipo === 'Parcelada' ? '('+item.Parcelas+'x)' : ''}</td>
+                    </tr>
+                `;
+            }
+
+            // Lógica de cálculo
+            const dataGasto = new Date(item.Data);
+            const mesGasto = dataGasto.getMonth();
+            const anoGasto = dataGasto.getFullYear();
+            const valor = parseFloat(item.Valor);
+            const parcelas = parseInt(item.Parcelas) || 1;
+
+            // Calcula a diferença de meses entre hoje e o gasto
+            const diffMeses = (anoAtual - anoGasto) * 12 + (mesAtual - mesGasto);
+
+            if (item.Tipo === 'Unica') {
+                if (diffMeses === 0) despesasMesAtual += valor;
+            } 
+            else if (item.Tipo === 'Recorrente') {
+                if (diffMeses >= 0) {
+                    despesasMesAtual += valor;
+                    projecaoMeses[0] += valor;
+                    projecaoMeses[1] += valor;
+                    projecaoMeses[2] += valor;
+                }
+            } 
+            else if (item.Tipo === 'Parcelada') {
+                // Se ainda está pagando no mês atual
+                if (diffMeses >= 0 && diffMeses < parcelas) {
+                    despesasMesAtual += (valor / parcelas);
+                }
+                // Projeta para os próximos 3 meses
+                for (let i = 1; i <= 3; i++) {
+                    if ((diffMeses + i) >= 0 && (diffMeses + i) < parcelas) {
+                        projecaoMeses[i-1] += (valor / parcelas);
+                    }
+                }
+            }
+        });
+
+        // Atualiza KPIs
+        document.getElementById('kpiSalario').innerText = `R$ ${salarioLiquido.toFixed(2)}`;
+        document.getElementById('kpiDespesas').innerText = `R$ ${despesasMesAtual.toFixed(2)}`;
+        const saldo = salarioLiquido - despesasMesAtual;
+        document.getElementById('kpiSaldo').innerText = `R$ ${saldo.toFixed(2)}`;
+
+        // Atualiza Tabela de Projeção
+        const tbodyProjecao = document.getElementById('tabelaProjecao');
+        tbodyProjecao.innerHTML = '';
+        
+        for (let i = 1; i <= 3; i++) {
+            let dataProjecao = new Date(anoAtual, mesAtual + i, 1);
+            let nomeMes = dataProjecao.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            let despesaProj = projecaoMeses[i-1];
+            let saldoProj = salarioLiquido - despesaProj;
+            
+            tbodyProjecao.innerHTML += `
+                <tr>
+                    <td style="text-transform: capitalize;">${nomeMes}</td>
+                    <td>R$ ${despesaProj.toFixed(2)}</td>
+                    <td style="color: ${saldoProj >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold;">R$ ${saldoProj.toFixed(2)}</td>
+                </tr>
+            `;
+        }
+    }
+
+    // Carrega os dados ao iniciar a página
+    window.onload = carregarDados; //[cite: 1]
+
 </script>
+</body>
+</html>
